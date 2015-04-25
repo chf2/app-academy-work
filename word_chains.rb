@@ -1,23 +1,45 @@
+require 'Set'
+
 class WordChainer
-  def initialize(dictionary_file_name = './dictionary.txt')
-    @dictionary = File.readlines(dictionary_file_name).map(&:chomp)
+  def initialize(dictionary_file_name)
+    @dictionary = Set.new(File.readlines(dictionary_file_name).map(&:chomp))
   end
 
   def adjacent_words(word)
-    word.downcase!
-    @dictionary.select do |d_word|
-      d_word.length == word.length && adjacent?(word, d_word)
+    adjacent_words = []
+    candidates = @dictionary.select{ |dword| dword.length == word.length }
+    word.chars.each_index do |char_index|
+      char = word[char_index]
+      (('a'..'z').to_a - [char]).each do |new_letter|
+        word[char_index] = new_letter
+        adjacent_words << word.dup if candidates.include?(word)
+      end
+      word[char_index] = char
+    end
+
+    adjacent_words
+  end
+
+  def run(source, target)
+    @current_words = [source]
+    @all_seen_words = {source => nil}
+    until @current_words.empty?
+      new_current_words = explore_current_words
+      p new_current_words
+      @current_words = new_current_words
     end
   end
 
-  def adjacent?(word1, word2)
-    counter = 0
-
-    word1.length.times do |i|
-      counter += 1 if word1[i] != word2[i]
+  def explore_current_words
+    new_current_words = []
+    @current_words.each do |current_word|
+      adjacent_words(current_word).each do |adjacent_word|
+        next if @all_seen_words.include?(adjacent_word)
+        new_current_words << adjacent_word
+        @all_seen_words[adjacent_word] = current_word
+      end
     end
 
-    counter == 1
+    new_current_words.each { |word| puts "#{word} --from: #{@all_seen_words[word]}"}
   end
-
 end
